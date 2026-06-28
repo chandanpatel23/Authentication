@@ -1,12 +1,14 @@
 import React, { useContext, useState } from 'react'
 import { dataContext } from '../context/UserContext'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
 
 function login() {
   
     let {serverUrl}=useContext(dataContext)
     let [email, setEmail]=useState(null)
     let [password, setPassword]=useState(null)
+    let navigate = useNavigate()
 
       const handleLogin = async (e)=> {
          e.preventDefault()
@@ -33,6 +35,8 @@ function login() {
             <input type="password" placeholder='password' className='w-[80%] h-[50px] bg-[white]
              outline-none border-none rounded-lg px-[10px] py-[5px]' value={password} onChange={(e)=>setPassword(e.target.value)}/>
             <button className='bg-[#57c2dd] px-[10px] py-[5px] rounded-lg'>Login</button>
+            <p className='text-white' onClick={()=> navigate("/signup")}>Want to create new account ? 
+              <span className='text-[#3597d8] cursor-pointer'> Sign Up</span></p>
         </form>
         
       </div>
