@@ -4,26 +4,26 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 
 function login() {
-  
-    let {serverUrl}=useContext(dataContext)
-    let [email, setEmail]=useState(null)
-    let [password, setPassword]=useState(null)
-    let navigate = useNavigate()
+  const { serverUrl, setUserData } = useContext(dataContext)
+  const [email, setEmail] = useState(null)
+  const [password, setPassword] = useState(null)
+  const navigate = useNavigate()
 
-      const handleLogin = async (e)=> {
-         e.preventDefault()
-      try {
-            let data = await axios.post(serverUrl + "/api/login",{
-              email,
-              password
-            },{withCredentials:true})
-            console.log(data);
-      } catch (error){
-        //  console.log(error.response.data.message);
-        alert(error.response.data.message)
-      }
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await axios.post(
+        serverUrl + "/api/login",
+        { email, password },
+        { withCredentials: true }
+      )
 
-      }
+      setUserData(response.data.user || response.data)
+      navigate("/home")
+    } catch (error) {
+      alert(error.response?.data?.message || "Login failed")
+    }
+  }
     
   return (
 <div className='w-full h-[100vh] bg-black flex justify-center items-center '>

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import User from "../models/user.model.js"
 import generateToken from "../config/token.js"
+import uploadOnCloudinary from "../config/cloudinary.js"
 
 export const signUp = async (req, res)=> {
     try {
@@ -9,7 +10,10 @@ export const signUp = async (req, res)=> {
         if(!firstName || !lastName || !email || !password || !userName){
             return res.status(400).json({message: "send all details"})
         }
-
+        let profileImage;
+        if(req.file) {
+            profileImage = await uploadOnCloudinary(req.file.path)
+        }
         let existUser = await User.findOne({email})
         if(existUser) {
             return res.status(400).json({message: "User already exist"})
@@ -22,7 +26,8 @@ export const signUp = async (req, res)=> {
             lastName,
             email,
             password:hashedPassword,
-            userName
+            userName,
+            profileImage
         })
 
         let token;
@@ -35,7 +40,8 @@ export const signUp = async (req, res)=> {
         res.cookie("token",token,{
             httpOnly: true,
             secure: false,
-            sameSite:"strict",
+            sameSite:"lax",
+            path:"/",
             maxAge:7*24*60*60*1000
         })
 
@@ -43,7 +49,8 @@ export const signUp = async (req, res)=> {
             firstName,
             lastName,
             email,
-            userName
+            userName,
+            profileImage
         }})
 
     } catch(error) {
@@ -74,7 +81,8 @@ export const login = async (req,res)=> {
         res.cookie("token",token,{
             httpOnly: true,
             secure: false,
-            sameSite:"strict",
+            sameSite:"lax",
+            path:"/",
             maxAge:7*24*60*60*1000
         })
 
@@ -82,7 +90,8 @@ export const login = async (req,res)=> {
             firstName:existUser.firstName,
             lastName:existUser.lastName,
             email:existUser.email,
-            userName:existUser.userName
+            userName:existUser.userName,
+            profileImage:existUser.profileImage
         }})
 
     } catch (error) {
@@ -93,9 +102,28 @@ export const login = async (req,res)=> {
 
 export const logout = async (req,res) => {
     try {
-            res.clearCookie("token")
+            res.clearCookie("token", { path:"/" })
             res.status(200).json({message:"Logout Successfully"})
     } catch(error) {
         res.status(500).json(error)
+    }
+}
+
+export const getUserData = async (req,res) => {
+    try {
+        const userId = req.userId
+        const user = await User.findById(userId).select("-password")
+        if(!user) {
+            return res.status(404).json({message:"User not found"})
+        }
+        return res.status(200).json({user:{
+            firstName:user.firstName,
+            lastName:user.lastName,
+            email:user.email,
+            userName:user.userName,
+            profileImage:user.profileImage
+        }})
+    } catch(error) {
+        return res.status(500).json({message:"Internal Server Error"})
     }
 }

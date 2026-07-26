@@ -6,39 +6,51 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 
 function SignUp() {
-  let {serverUrl}=useContext(dataContext)
+  let {serverUrl,setUserData}=useContext(dataContext)
   let navigate = useNavigate()
 
+    let [frontendImage,setFrontendImage]= useState(dp)
+    let [backendImage,setBackendImage]= useState(null)
     let [firstName, setFirstName]=useState(null)
     let [lastName, setLastName]=useState(null)
     let [userName, setUserName]=useState(null)
     let [email, setEmail]=useState(null)
     let [password, setPassword]=useState(null)
+    let [error, setError] = useState(null)
     let file = useRef(null)
 
     const handleSignUp = async (e)=>{
       e.preventDefault()
+      setError(null)
       try {
-            let data = await axios.post(serverUrl + "/api/signup",{
-              firstName,
-              lastName,
-              userName,
-              email,
-              password
-            },{withCredentials:true})
-            console.log(data);
+            let formData = new FormData()
+            formData.append("firstName",firstName)
+            formData.append("lastName",lastName)
+            formData.append("userName",userName)
+            formData.append("email",email)
+            formData.append("password",password)
+            if(backendImage){
+              formData.append("profileImage",backendImage)
+            }
+            let response = await axios.post(serverUrl + "/api/signup",formData,
+              {withCredentials:true,
+              headers: {
+                "Content-Type": "multipart/form-data"
+              }
+            })
+            setUserData(response.data.user || response.data)
+            navigate("/home")
+            
       } catch (error){
-          console.log(error.message);
+          console.log(error);
+          setError(error.response?.data?.message || "Signup failed. Please try again.")
       }
     }
-
-    let [frontendImage,setFrontendImage]= useState(dp)
-    let [backendImage,setBackendImage]= useState(null)
     function handleImage(e){  
       let file =e.target.files[0]
-      setBachendImage(file)
+      setBackendImage(file)
       let image = URL.createObjectURL(file)
-      setFrontendImage(iamge)
+      setFrontendImage(image)
       
     }
 
@@ -47,8 +59,9 @@ function SignUp() {
 <div className='w-full h-[100vh] bg-black flex justify-center items-center '>
       <div className='w-[90%] max-w-[500px] h-[600px] bg-[#183b39] rounded flex flex-col justify-center items-center gap-[20px]'>
         <h1 className='text-white text-[20px] font-semibold '>Sign Up</h1>
+        {error && <p className='text-red-500 text-sm'>{error}</p>}
         <form className='w-[100%] flex flex-col justify-center items-center gap-[20px]' onSubmit={handleSignUp}>
-          <input type="file" hidden ref={file} onChange={()=> handleImage}/>
+          <input type="file" hidden ref={file} onChange={handleImage}/>
           <div className='w-[100px] h-[100px] rounded-full bg-white overflow-hidden relative border-2 border-white'>
               <img src={frontendImage} alt=""  className='w-full h-full '/>
               <div className='absolute inset-0 rounded-full bg-black opacity-0 hover:opacity-50 cursor-pointer flex justify-center items-center text-white text-[20px] font-semibold'
