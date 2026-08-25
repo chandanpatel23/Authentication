@@ -37,12 +37,13 @@ export const signUp = async (req, res)=> {
             console.log(error)
         }
         
-        res.cookie("token",token,{
+        const isProd = process.env.NODE_ENV === "production";
+        res.cookie("token", token, {
             httpOnly: true,
-            secure: false,
-            sameSite:"lax",
-            path:"/",
-            maxAge:7*24*60*60*1000
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 7 * 24 * 60 * 60 * 1000
         })
 
         return res.status(201).json({user:{
@@ -78,12 +79,13 @@ export const login = async (req,res)=> {
             console.log(error)
         }
         
-        res.cookie("token",token,{
+        const isProd = process.env.NODE_ENV === "production";
+        res.cookie("token", token, {
             httpOnly: true,
-            secure: false,
-            sameSite:"lax",
-            path:"/",
-            maxAge:7*24*60*60*1000
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 7 * 24 * 60 * 60 * 1000
         })
 
         return res.status(200).json({user:{
@@ -102,7 +104,13 @@ export const login = async (req,res)=> {
 
 export const logout = async (req,res) => {
     try {
-            res.clearCookie("token", { path:"/" })
+            const isProd = process.env.NODE_ENV === "production";
+            res.clearCookie("token", {
+                httpOnly: true,
+                secure: isProd,
+                sameSite: isProd ? "none" : "lax",
+                path: "/"
+            })
             res.status(200).json({message:"Logout Successfully"})
     } catch(error) {
         res.status(500).json(error)

@@ -1,0 +1,124 @@
+name: Monorepo CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # 🔍 Step 1: Detect path changes in monorepo
+  changes:
+    name: Detect Changed Components
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Filter Changed Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci-cd.yml'
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci-cd.yml'
+
+  # 🎨 Step 2: Frontend CI Pipeline
+  frontend-ci:
+    name: Frontend CI (Lint & Build)
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build Production Frontend
+        run: npm run build
+
+  # ⚙️ Step 3: Backend CI Pipeline
+  backend-ci:
+    name: Backend CI (Test & Validate)
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './backend/package-lock.json'
+
+      - name: Install Backend Dependencies
+        run: npm ci
+
+      - name: Run Backend Syntax & Tests
+        run: npm test
+
+  # 🚀 Step 4: Deploy Backend (Runs on push to main/master after CI passes)
+  deploy-backend:
+    name: Deploy Backend (Render)
+    needs: [changes, backend-ci]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$HOOK_URL" ]; then
+            echo "Triggering Render deploy hook..."
+            curl -sS -X POST "$HOOK_URL"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret is not configured. Skipping deploy step."
+          fi
+
+  # 🚀 Step 5: Deploy Frontend (Runs on push to main/master after CI passes)
+  deploy-frontend:
+    name: Deploy Frontend (Vercel)
+    needs: [changes, frontend-ci]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$HOOK_URL" ]; then
+            echo "Triggering Vercel deploy hook..."
+            curl -sS -X POST "$HOOK_URL"
+          else
+            echo "VERCEL_DEPLOY_HOOK_URL secret is not configured. Skipping deploy step."
+          fi

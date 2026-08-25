@@ -6,7 +6,7 @@ export const dataContext = createContext()
 function UserContext({ children }) {
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const serverUrl = "http://localhost:8000"
+  const serverUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:4000"
 
   const getUserData = async () => {
     try {
